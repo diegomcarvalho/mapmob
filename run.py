@@ -56,7 +56,7 @@ def main():
                 for r in ret:
                     stat_pool.add_value(run_lines_id, r)
                     bar()
-                    print(f" {stat_pool.sum(run_lines_id):16} lines processed")
+                    print(f" {stat_pool.sum(run_lines_id):16} processed lines")
                 futures = not_ready
             fut = pipeline.remote(w, database_dir, metadata_dir)
             futures.append(fut)
