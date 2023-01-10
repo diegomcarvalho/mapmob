@@ -26,8 +26,13 @@ from alive_progress import alive_bar
 import ray
 import glob
 
-from applications import pipeline
+import pandas as pd
+
+from applications import stat_pipeline
 from statvar import StatisticsVariable
+from codetiming import Timer
+
+from zipstorage import decode_meta_name
 
 
 def main():
@@ -41,9 +46,12 @@ def main():
     futures = []
     max_pending_tasks = 24 * 2
 
-    database_dir = "/home/carvalho/processed_data"
-    metadata_dir = "metadata"
-    workload = "../workflowgear/busdata/G1-*.zip"
+    database_dir = "/home/carvalho/processed_data/database"
+    workload = f"{database_dir}/DST-A/G1*.parquet"
+
+    stat_data = list()
+    meta_timer = dict()
+    meta_data = list()
 
     n = len(glob.glob(workload))
 
@@ -54,17 +62,49 @@ def main():
                 bar.text = f"-> Ready: {len(ready_tasks)}, Not ready tasks: {len(futures)} Next to be submitted: {w}"
                 ret = ray.get(ready_tasks)
                 for r in ret:
-                    stat_pool.add_value(run_lines_id, r)
+                    tag, num_obs, velocity, speed, distance, interval, num_bus = r
+                    meta_data.append((tag, meta_timer[tag].stop()))
+                    stat_pool.add_value(run_lines_id, num_obs)
                     bar()
-                    print(f" {stat_pool.sum(run_lines_id):16} lines processed")
+                    print(
+                        f" {stat_pool.sum(run_lines_id):16} lines processed: {velocity}, {distance}, {interval}, {num_bus}"
+                    )
+                    stat_data.append(r)
                 futures = not_ready
-            fut = pipeline.remote(w, database_dir, metadata_dir)
+            tag = decode_meta_name(w)
+            meta_timer[tag] = Timer(name=tag, logger=None)
+            meta_timer[tag].start()
+            fut = stat_pipeline.remote(w, database_dir)
             futures.append(fut)
 
         ret = ray.get(futures)
         for r in ret:
-            stat_pool.add_value(run_lines_id, r)
+            tag, num_obs, velocity, speed, distance, interval, num_bus = r
+            meta_data.append((tag, meta_timer[tag].stop()))
+            stat_data.append(r)
+            stat_pool.add_value(run_lines_id, num_obs)
             bar()
+
+    df = pd.DataFrame(
+        stat_data,
+        columns=[
+            "TAG",
+            "NUM_OBS",
+            "VELOCITY",
+            "SPEED",
+            "DISTANCE",
+            "INTERVAL",
+            "NUM_BUS",
+        ],
+    )
+
+    df.to_parquet("/home/carvalho/processed_data/general_stat.parquet")
+
+    df_meta = pd.DataFrame(meta_data, columns=["TAG", "TIME"])
+
+    df_meta.to_parquet("/home/carvalho/processed_data/processing_time.parquet")
+
+    return
 
 
 if __name__ == "__main__":

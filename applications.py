@@ -427,3 +427,48 @@ def pipeline(
         calculate_daily_mobility(df, dst_D_file, dst_E_file, version)
 
     return len(df)
+
+
+@ray.remote(num_cpus=1)
+def stat_pipeline(file_name: str, output_dir: str):
+
+    tag = decode_meta_name(file_name)
+
+    dst_0_dir = f"{output_dir}/DST-0"
+    dst_A_dir = f"{output_dir}/DST-A"
+    dst_B_dir = f"{output_dir}/DST-B"
+    dst_C_dir = f"{output_dir}/DST-C"
+    dst_D_dir = f"{output_dir}/DST-D"
+    dst_E_dir = f"{output_dir}/DST-E"
+
+    dst_0_file = f"{dst_0_dir}/{tag}.parquet"
+    dst_A_file = f"{dst_A_dir}/{tag}.parquet"
+    dst_B_file = f"{dst_B_dir}/{tag}.parquet"
+    dst_C_file = f"{dst_C_dir}/{tag}.parquet"
+    dst_D_file = f"{dst_D_dir}/{tag}.parquet"
+    dst_E_file = f"{dst_E_dir}/{tag}.parquet"
+
+    input_list = [
+        dst_A_file,
+        #        dst_D_file,
+    ]
+
+    statdata_dir = f"{output_dir}/statdata"
+
+    try:
+        df = pd.merge(
+            pd.read_parquet(dst_A_file).drop("SWVERSION", axis=1),
+            pd.read_parquet(dst_D_file).drop("SWVERSION", axis=1),
+            on="ID",
+        )
+
+        num_obs = len(df)
+        velocity = df["VELOCITY"].mean()
+        speed = df["SPEED"].mean()
+        distance = df["DISTANCE"].mean()
+        interval = df["INTERVAL"].mean() / np.timedelta64(1, "s")
+        num_bus = len(df["BUSID"].unique())
+
+        return tag, num_obs, velocity, speed, distance, interval, num_bus
+    except:
+        return tag, 0, 0.0, 0.0, 0.0, 0
