@@ -62,7 +62,19 @@ def main():
                 bar.text = f"-> Ready: {len(ready_tasks)}, Not ready tasks: {len(futures)} Next to be submitted: {w}"
                 ret = ray.get(ready_tasks)
                 for r in ret:
-                    tag, num_obs, velocity, speed, distance, interval, num_bus = r
+                    (
+                        tag,
+                        num_obs,
+                        velocity,
+                        speed,
+                        distance,
+                        interval,
+                        num_bus,
+                        co,
+                        co2,
+                        nox,
+                        hc,
+                    ) = r
                     meta_data.append((tag, meta_timer[tag].stop()))
                     stat_pool.add_value(run_lines_id, num_obs)
                     bar()
@@ -79,7 +91,19 @@ def main():
 
         ret = ray.get(futures)
         for r in ret:
-            tag, num_obs, velocity, speed, distance, interval, num_bus = r
+            (
+                tag,
+                num_obs,
+                velocity,
+                speed,
+                distance,
+                interval,
+                num_bus,
+                co,
+                co2,
+                nox,
+                hc,
+            ) = r
             meta_data.append((tag, meta_timer[tag].stop()))
             stat_data.append(r)
             stat_pool.add_value(run_lines_id, num_obs)
@@ -95,6 +119,10 @@ def main():
             "DISTANCE",
             "INTERVAL",
             "NUM_BUS",
+            "CO",
+            "CO_2",
+            "NO_x",
+            "HC",
         ],
     )
 
