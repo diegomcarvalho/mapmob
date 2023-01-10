@@ -79,11 +79,11 @@ def main():
                     stat_pool.add_value(run_lines_id, num_obs)
                     bar()
                     print(
-                        f" {stat_pool.sum(run_lines_id):16} lines processed: {velocity}, {distance}, {interval}, {num_bus}"
+                        f" {tag} - {stat_pool.sum(run_lines_id):16} processed lines - {num_bus} vehicles"
                     )
                     stat_data.append(r)
                 futures = not_ready
-            tag = decode_meta_name(w)
+            tag = decode_meta_name(w).replace("G1-", "")
             meta_timer[tag] = Timer(name=tag, logger=None)
             meta_timer[tag].start()
             fut = stat_pipeline.remote(w, database_dir)

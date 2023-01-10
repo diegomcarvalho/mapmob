@@ -468,6 +468,7 @@ def stat_pipeline(file_name: str, output_dir: str):
             on="ID",
         )
 
+        tag = tag.replace("G1-", "")
         num_obs = len(df)
         velocity = df["VELOCITY"].mean()
         speed = df["SPEED"].mean()
@@ -480,7 +481,7 @@ def stat_pipeline(file_name: str, output_dir: str):
         hc = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["HC"]).dropna())
 
         return (
-            tag.replace("G1-", ""),
+            tag,
             num_obs,
             velocity,
             speed,
@@ -494,7 +495,7 @@ def stat_pipeline(file_name: str, output_dir: str):
         )
     except:
         return (
-            tag.replace("G1-", ""),
+            tag,
             0,
             0.0,
             0.0,
