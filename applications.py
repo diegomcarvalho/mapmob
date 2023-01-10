@@ -462,13 +462,47 @@ def stat_pipeline(file_name: str, output_dir: str):
             on="ID",
         )
 
+        df = pd.merge(
+            df,
+            pd.read_parquet(dst_E_file).drop("SWVERSION", axis=1),
+            on="ID",
+        )
+
         num_obs = len(df)
         velocity = df["VELOCITY"].mean()
         speed = df["SPEED"].mean()
         distance = df["DISTANCE"].mean()
         interval = df["INTERVAL"].mean() / np.timedelta64(1, "s")
         num_bus = len(df["BUSID"].unique())
+        co = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["CO"]).dropna())
+        co2 = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["CO_2"]).dropna())
+        nox = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["NO_x"]).dropna())
+        hc = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["HC"]).dropna())
 
-        return tag, num_obs, velocity, speed, distance, interval, num_bus
+        return (
+            tag.replace("G1-", ""),
+            num_obs,
+            velocity,
+            speed,
+            distance,
+            interval,
+            num_bus,
+            co,
+            co2,
+            nox,
+            hc,
+        )
     except:
-        return tag, 0, 0.0, 0.0, 0.0, 0
+        return (
+            tag.replace("G1-", ""),
+            0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        )
