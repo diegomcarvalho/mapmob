@@ -36,6 +36,7 @@ import pandas as pd
 from tools import haversine, files_and_version_are_ok
 
 from zipstorage import decode_meta_name, decode_zip_storage
+from algo import AlgorithmFactory
 
 
 # DST-0
@@ -430,80 +431,63 @@ def pipeline(
 
 
 @ray.remote(num_cpus=1)
-def stat_pipeline(file_name: str, output_dir: str):
+def stat_pipeline(file_name: str, tag: str, base: str, file_list: str, algo):
 
-    tag = decode_meta_name(file_name)
+    file_base = decode_meta_name(file_name)
 
-    dst_0_dir = f"{output_dir}/DST-0"
-    dst_A_dir = f"{output_dir}/DST-A"
-    dst_B_dir = f"{output_dir}/DST-B"
-    dst_C_dir = f"{output_dir}/DST-C"
-    dst_D_dir = f"{output_dir}/DST-D"
-    dst_E_dir = f"{output_dir}/DST-E"
+    dst_0_dir = f"{base}/DST-0"
+    dst_A_dir = f"{base}/DST-A"
+    dst_B_dir = f"{base}/DST-B"
+    dst_C_dir = f"{base}/DST-C"
+    dst_D_dir = f"{base}/DST-D"
+    dst_E_dir = f"{base}/DST-E"
 
-    dst_0_file = f"{dst_0_dir}/{tag}.parquet"
-    dst_A_file = f"{dst_A_dir}/{tag}.parquet"
-    dst_B_file = f"{dst_B_dir}/{tag}.parquet"
-    dst_C_file = f"{dst_C_dir}/{tag}.parquet"
-    dst_D_file = f"{dst_D_dir}/{tag}.parquet"
-    dst_E_file = f"{dst_E_dir}/{tag}.parquet"
+    dst_0_file = f"{dst_0_dir}/{file_base}.parquet"
+    dst_A_file = f"{dst_A_dir}/{file_base}.parquet"
+    dst_B_file = f"{dst_B_dir}/{file_base}.parquet"
+    dst_C_file = f"{dst_C_dir}/{file_base}.parquet"
+    dst_D_file = f"{dst_D_dir}/{file_base}.parquet"
+    dst_E_file = f"{dst_E_dir}/{file_base}.parquet"
 
-    input_list = [
-        dst_A_file,
-        #        dst_D_file,
-    ]
+    df = pd.read_parquet(dst_A_file).drop("SWVERSION", axis=1)
 
-    statdata_dir = f"{output_dir}/statdata"
-
-    try:
+    if "B" in file_list:
         df = pd.merge(
-            pd.read_parquet(dst_A_file).drop("SWVERSION", axis=1),
+            df,
+            pd.read_parquet(dst_B_file).drop("SWVERSION", axis=1),
+            on="ID",
+        )
+
+    if "C" in file_list:
+        df = pd.merge(
+            df,
+            pd.read_parquet(dst_C_file).drop("SWVERSION", axis=1),
+            on="ID",
+        )
+
+    if "D" in file_list:
+        df = pd.merge(
+            df,
             pd.read_parquet(dst_D_file).drop("SWVERSION", axis=1),
             on="ID",
         )
 
+    if "E" in file_list:
         df = pd.merge(
             df,
             pd.read_parquet(dst_E_file).drop("SWVERSION", axis=1),
             on="ID",
         )
 
-        tag = tag.replace("G1-", "")
-        num_obs = len(df)
-        velocity = df["VELOCITY"].mean()
-        speed = df["SPEED"].mean()
-        distance = df["DISTANCE"].mean()
-        interval = df["INTERVAL"].mean() / np.timedelta64(1, "s")
-        num_bus = len(df["BUSID"].unique())
-        co = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["CO"]).dropna())
-        co2 = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["CO_2"]).dropna())
-        nox = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["NO_x"]).dropna())
-        hc = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["HC"]).dropna())
+    ag = AlgorithmFactory.get_algorithm(algo)
 
-        return (
-            tag,
-            num_obs,
-            velocity,
-            speed,
-            distance,
-            interval,
-            num_bus,
-            co,
-            co2,
-            nox,
-            hc,
-        )
-    except:
-        return (
-            tag,
-            0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-        )
+    return ag.visit_data_frame(tag, df)
+
+
+"""     except:
+        ret_t = ag.ret_type()
+        ret_val = [tag]
+        for x in range(len(ret_t._fields) - 1):
+            ret_val.append(0)
+        return ret_t._make(ret_val)
+ """

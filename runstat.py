@@ -27,6 +27,7 @@ import ray
 import glob
 
 import pandas as pd
+from algo import AlgorithmFactory
 
 from applications import stat_pipeline
 from statvar import StatisticsVariable
@@ -43,11 +44,13 @@ def main():
 
     run_lines_id = stat_pool.create_variable("NUM_LINES")
 
+    ag = AlgorithmFactory.get_algorithm("algo01")
+
     futures = []
-    max_pending_tasks = 24 * 2
+    max_pending_tasks = 24 * 4
 
     database_dir = "/home/carvalho/processed_data/database"
-    workload = f"{database_dir}/DST-A/G1*.parquet"
+    workload = f"{database_dir}/DST-A/G1-20[12][82]*.parquet"
 
     stat_data = list()
     meta_timer = dict()
@@ -62,69 +65,36 @@ def main():
                 bar.text = f"-> Ready: {len(ready_tasks)}, Not ready tasks: {len(futures)} Next to be submitted: {w}"
                 ret = ray.get(ready_tasks)
                 for r in ret:
-                    (
-                        tag,
-                        num_obs,
-                        velocity,
-                        speed,
-                        distance,
-                        interval,
-                        num_bus,
-                        co,
-                        co2,
-                        nox,
-                        hc,
-                    ) = r
+                    tag = r.TAG
                     meta_data.append((tag, meta_timer[tag].stop()))
-                    stat_pool.add_value(run_lines_id, num_obs)
+                    stat_pool.add_value(run_lines_id, r.NUM_OBS)
                     bar()
                     print(
-                        f" {tag} - {stat_pool.sum(run_lines_id):16} processed lines - {num_bus} vehicles"
+                        f" {tag} - {stat_pool.sum(run_lines_id):16} processed lines - {r.NUM_BUS} vehicles"
                     )
                     stat_data.append(r)
                 futures = not_ready
             tag = decode_meta_name(w).replace("G1-", "")
             meta_timer[tag] = Timer(name=tag, logger=None)
             meta_timer[tag].start()
-            fut = stat_pipeline.remote(w, database_dir)
+            fut = stat_pipeline.remote(
+                w,
+                tag,
+                "/home/carvalho/processed_data/database",
+                ["A", "D", "E"],
+                ag.name,
+            )
             futures.append(fut)
 
         ret = ray.get(futures)
         for r in ret:
-            (
-                tag,
-                num_obs,
-                velocity,
-                speed,
-                distance,
-                interval,
-                num_bus,
-                co,
-                co2,
-                nox,
-                hc,
-            ) = r
+            tag = r.TAG
             meta_data.append((tag, meta_timer[tag].stop()))
             stat_data.append(r)
-            stat_pool.add_value(run_lines_id, num_obs)
+            stat_pool.add_value(run_lines_id, r.NUM_OBS)
             bar()
 
-    df = pd.DataFrame(
-        stat_data,
-        columns=[
-            "TAG",
-            "NUM_OBS",
-            "VELOCITY",
-            "SPEED",
-            "DISTANCE",
-            "INTERVAL",
-            "NUM_BUS",
-            "CO",
-            "CO_2",
-            "NO_x",
-            "HC",
-        ],
-    )
+    df = pd.DataFrame(stat_data, columns=ag.columns)
 
     df.to_parquet("/home/carvalho/processed_data/general_stat.parquet")
 
