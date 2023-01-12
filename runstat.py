@@ -44,13 +44,13 @@ def main():
 
     run_lines_id = stat_pool.create_variable("NUM_LINES")
 
-    ag = AlgorithmFactory.get_algorithm("algo01")
+    ag = AlgorithmFactory.get_algorithm("algo_velo")
 
     futures = []
     max_pending_tasks = 24 * 4
 
     database_dir = "/home/carvalho/processed_data/database"
-    workload = f"{database_dir}/DST-A/G1-20[12][82]*.parquet"
+    workload = f"{database_dir}/DST-A/G1-*.parquet"
 
     stat_data = list()
     meta_timer = dict()
@@ -69,9 +69,7 @@ def main():
                     meta_data.append((tag, meta_timer[tag].stop()))
                     stat_pool.add_value(run_lines_id, r.NUM_OBS)
                     bar()
-                    print(
-                        f" {tag} - {stat_pool.sum(run_lines_id):16} processed lines - {r.NUM_BUS} vehicles"
-                    )
+                    print(f" {tag} - {stat_pool.sum(run_lines_id):16} processed lines")
                     stat_data.append(r)
                 futures = not_ready
             tag = decode_meta_name(w).replace("G1-", "")
@@ -81,7 +79,7 @@ def main():
                 w,
                 tag,
                 "/home/carvalho/processed_data/database",
-                ["A", "D", "E"],
+                ["A", "C"],
                 ag.name,
             )
             futures.append(fut)

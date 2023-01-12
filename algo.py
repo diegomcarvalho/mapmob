@@ -89,5 +89,40 @@ class Algorithm_01(Algorithm):
         return ret_value
 
 
+class Algorithm_02(Algorithm):
+    columns = [
+        "TAG",  # Info do dia ex.2022-07-12
+        "NUM_OBS",
+        "VELOCITY01",
+        "VELOCITY02",
+        "VELOCITY03",
+    ]
+
+    def __init__(self, name) -> None:
+        super().__init__(name, self.columns)
+
+    def visit_data_frame(self, tag, df):
+        import numpy as np
+
+        num_obs = len(df)
+
+        velocity01 = df.VELOCITY.mean()
+        velocity02 = df.VELOCITY.mean()
+        velocity03 = df.VELOCITY.mean()
+
+        ret_value = self.ret_type()._make(
+            (
+                tag,
+                num_obs,
+                velocity01,
+                velocity02,
+                velocity03,
+            )
+        )
+
+        return ret_value
+
+
 AlgorithmFactory = AlgorithmFactoryClass()
 AlgorithmFactory.register("algo01", Algorithm_01)
+AlgorithmFactory.register("algo_velo", Algorithm_02)
