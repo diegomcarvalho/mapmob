@@ -123,6 +123,40 @@ class Algorithm_02(Algorithm):
         return ret_value
 
 
+class Algorithm_03(Algorithm):
+    columns = [
+        "TAG",  # Info do dia ex.2022-07-12
+        "NUM_OBS",
+    ]
+
+    def __init__(self, name) -> None:
+
+        for i in range(165):
+            self.columns.append(f"BAIRRO{i:03}")
+
+        super().__init__(name, self.columns)
+
+    def visit_data_frame(self, tag, df):
+        import numpy as np
+
+        num_obs = len(df)
+
+        result_list = []
+
+        for i in range(165):
+            result_list.append(df[df.CODBAIRRO == f"{i:03}"].VELOCITY.mean())
+
+        ret_value = self.ret_type()._make(
+            (
+                tag,
+                num_obs,
+                *result_list
+            )
+        )
+
+        return ret_value
+
 AlgorithmFactory = AlgorithmFactoryClass()
 AlgorithmFactory.register("algo01", Algorithm_01)
 AlgorithmFactory.register("algo_velo", Algorithm_02)
+AlgorithmFactory.register("algo_bairro", Algorithm_03)
