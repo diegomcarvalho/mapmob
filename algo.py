@@ -1,6 +1,8 @@
 from collections import namedtuple
 from abc import ABC, abstractmethod
 from typing import List
+from datetime import datetime
+
 
 
 class Algorithm(ABC):
@@ -38,21 +40,17 @@ class AlgorithmFactoryClass:
 
 
 class Algorithm_01(Algorithm):
-    columns = [
-        "TAG",
-        "NUM_OBS",
-        "VELOCITY",
-        "SPEED",
-        "DISTANCE",
-        "INTERVAL",
-        "NUM_BUS",
-        "CO",
-        "CO_2",
-        "NO_x",
-        "HC",
-    ]
-
+    columns = []
     def __init__(self, name) -> None:
+        if len(self.columns) == 0:
+            for i in ["TAG", "NUM_OBS", "VELOCITY", "SPEED", "DISTANCE", "INTERVAL", "NUM_BUS", "CO", "CO_2", "NO_x", "HC"]:
+                self.columns.append(i)
+
+            for i in range(1,49):
+                self.columns.append(f"VCORR_{i:02}")
+
+            for i in range(1,49):
+                self.columns.append(f"SCORR_{i:02}")
         super().__init__(name, self.columns)
 
     def visit_data_frame(self, tag, df):
@@ -60,7 +58,8 @@ class Algorithm_01(Algorithm):
 
         tag = tag.replace("G1-", "")
         num_obs = len(df)
-        velocity = df.VELOCITY[df["VELOCITY"] != 0].mean()
+
+        velocity = df["VELOCITY"].mean()
         speed = df["SPEED"].mean()
         distance = df["DISTANCE"].mean()
         interval = df["INTERVAL"].mean() / np.timedelta64(1, "s")
@@ -69,6 +68,16 @@ class Algorithm_01(Algorithm):
         co2 = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["CO_2"]).dropna())
         nox = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["NO_x"]).dropna())
         hc = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["HC"]).dropna())
+
+        result_list = []
+
+        for i in range(1,49):
+            t = df[df["CORREDOR"] == i].VELOCITY.mean()
+            result_list.append(t)
+
+        for i in range(1,49):
+            t = df[df["CORREDOR"] == i].SPEED.mean()
+            result_list.append(t)
 
         ret_value = self.ret_type()._make(
             (
@@ -83,6 +92,7 @@ class Algorithm_01(Algorithm):
                 co2,
                 nox,
                 hc,
+                *result_list,
             )
         )
 
@@ -156,7 +166,82 @@ class Algorithm_03(Algorithm):
 
         return ret_value
 
+class Algorithm_04(Algorithm):
+    columns = []
+    def __init__(self, name) -> None:
+        if len(self.columns) == 0:
+            for i in ["TAG", "NUM_OBS", "VELOCITY", "SPEED", "DISTANCE", "INTERVAL", "NUM_BUS", "CO", "CO_2", "NO_x", "HC"]:
+                self.columns.append(i)
+
+            for i in range(1,49):
+                self.columns.append(f"VCORR_{i:02}")
+
+            for i in range(1,49):
+                self.columns.append(f"SCORR_{i:02}")
+
+            for i in range(1,49):
+                self.columns.append(f"SDVCORR_{i:02}")
+
+        super().__init__(name, self.columns)
+
+    def visit_data_frame(self, tag, df):
+        import numpy as np
+
+        tag = tag.replace("G1-", "")
+
+        d  = datetime.strptime(tag, '%Y-%m-%d')
+        dw = d.weekday()
+        if dw in [0,4,5,6]:
+            return None
+        
+        num_obs = len(df)
+        velocity = df["VELOCITY"].mean()
+        speed = df["SPEED"].mean()
+        distance = df["DISTANCE"].mean()
+        interval = df["INTERVAL"].mean() / np.timedelta64(1, "s")
+        num_bus = len(df["BUSID"].unique())
+        co = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["CO"]).dropna())
+        co2 = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["CO_2"]).dropna())
+        nox = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["NO_x"]).dropna())
+        hc = sum(((df["INTERVAL"] / np.timedelta64(1, "s")) * df["HC"]).dropna())
+
+        result_list = []
+
+        for i in range(1,49):
+            t = df[df["CORREDOR"] == i].VELOCITY.mean()
+            result_list.append(t)
+
+        for i in range(1,49):
+            t = df[df["CORREDOR"] == i].SPEED.mean()
+            result_list.append(t)
+
+        for i in range(1,49):
+            t = df[df["CORREDOR"] == i].SPEED.std()
+            result_list.append(t)
+
+        ret_value = self.ret_type()._make(
+            (
+                tag,
+                num_obs,
+                velocity,
+                speed,
+                distance,
+                interval,
+                num_bus,
+                co,
+                co2,
+                nox,
+                hc,
+                *result_list,
+            )
+        )
+
+        return ret_value
+
+
+
 AlgorithmFactory = AlgorithmFactoryClass()
 AlgorithmFactory.register("algo01", Algorithm_01)
 AlgorithmFactory.register("algo_velo", Algorithm_02)
 AlgorithmFactory.register("algo_bairro", Algorithm_03)
+AlgorithmFactory.register("algo_corredor", Algorithm_04)

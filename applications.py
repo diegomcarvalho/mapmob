@@ -17,7 +17,7 @@ __author__ = "Diego Carvalho"
 __copyright__ = "Copyright 2022"
 __credits__ = ["Diego Carvalho"]
 __license__ = "GPL"
-__version__ = "2.0.0"
+__version__ = "2.0.8"
 __maintainer__ = "Diego Carvalho, Pablo Moreira, Vinicius Vancelloti"
 __email__ = "d.carvalho@ieee.org"
 __status__ = "Research"
@@ -160,7 +160,7 @@ def elevation_pipeline(
     return
 
 
-# DST-B or DST-C
+#  DST-C
 def regions_pipeline(
     df: Any,
     region_file: str,
@@ -196,11 +196,109 @@ def regions_pipeline(
     df_result["ID"] = df["ID"]
 
     for m, e in zip(map_cols, ext_cols):
-        df_result[m] = dfjoin[e]
+        df_result[m] = pd.merge(df_result, dfjoin, on="ID")[e]
+        # df_result[m] = dfjoin[e]
 
     df_result["SWVERSION"] = version
 
     df_result.to_parquet(output_file)
+
+    return
+
+
+# Join regions_pipeline DST-B
+def join_barrios_garages_terminals_pipeline(
+    df: Any,
+    output_file: str,
+    version: str,
+):
+    if len(df) == 0:
+        return
+
+    garagens = gpd.read_file("/home/carvalho/mapmob/regions/Garagens.geojson")
+    terminais = gpd.read_file("/home/carvalho/mapmob/regions/Terminais.geojson")
+    bairros = gpd.read_file("/home/carvalho/mapmob/regions/Limite_de_Bairros.geojson")
+    velocidade = gpd.read_file("/home/carvalho/mapmob/regions/corredores.geojson")
+
+    gdf = gpd.GeoDataFrame(
+        df, geometry=gpd.points_from_xy(df.LONGITUDE, df.LATITUDE), crs="EPSG:4326"
+    )
+
+    dfjoin = gpd.sjoin(gdf, bairros, how="left")
+    dfjoin = dfjoin.drop(
+        columns=[
+            "OBJECTID",
+            "Área",
+            "NOME",
+            "AREA_PLANE",
+            "REGIAO_ADM",
+            "CODBNUM",
+            "LINK",
+            "RP",
+            "Cod_RP",
+            "CODBAIRRO_LONG",
+            "SHAPESTArea",
+            "SHAPESTLength",
+            "index_right",
+        ],
+        axis=1,
+    )
+
+    # Fazendo o Join com as Garagens
+    dfjoin = gpd.sjoin(dfjoin, garagens, how="left")
+    dfjoin = dfjoin.drop(
+        columns=[
+            "latitude_max",
+            "latitude_min",
+            "longitude_max",
+            "longitude_min",
+            "nome_empresa",
+            "tipo",
+            "ativa",
+            "index_right",
+        ],
+        axis=1,
+    )
+
+    # Fazendo o Join com os Terminais
+    dfjoin = gpd.sjoin(dfjoin, terminais, how="left")
+    dfjoin = dfjoin.drop(
+        columns=[
+            "nome_terminal",
+            "index_right",
+        ],
+        axis=1,
+    )
+
+    # Fazendo o Join com os Corredores
+    dfjoin = gpd.sjoin(dfjoin, velocidade, how="left")
+    dfjoin = dfjoin.drop(
+        columns=[
+            "Name",
+            "latitude",
+            "longitude",
+            "OBJECTID",
+            "index_right",
+            "geometry",
+            "DATE",
+            "BUSID",
+            "LINE",
+            "LATITUDE",
+            "LONGITUDE",
+            "VELOCITY",
+            "SWVERSION",
+            "ELEVATION"
+        ],
+        axis=1,
+    )
+
+    dfjoin.rename(
+        columns={"id_garagem": "PARKING", "num_identificacao": "TERMINAL", "Cod": "CORREDOR"}, inplace=True
+    )
+
+    dfjoin["SWVERSION"] = version
+
+    dfjoin.to_parquet(output_file)
 
     return
 
@@ -405,11 +503,8 @@ def pipeline(
         df = pd.read_parquet(dst_A_file)
 
     if df_list[2] is None:
-        regions_pipeline(
+        join_barrios_garages_terminals_pipeline(
             df.copy(),
-            "regions/Limite_de_Bairros.geojson",
-            ["CODRA", "CODBAIRRO"],
-            ["CODRA", "CODBAIRRO"],
             dst_B_file,
             version,
         )

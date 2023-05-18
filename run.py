@@ -17,7 +17,7 @@ __author__ = "Diego Carvalho"
 __copyright__ = "Copyright 2022"
 __credits__ = ["Diego Carvalho"]
 __license__ = "GPL"
-__version__ = "2.0.0"
+__version__ = "2.0.4"
 __maintainer__ = "Diego Carvalho"
 __email__ = "d.carvalho@ieee.org"
 __status__ = "Research"
@@ -43,7 +43,7 @@ def main():
 
     database_dir = "/home/carvalho/processed_data"
     metadata_dir = "metadata"
-    workload = "../workflowgear/busdata/G1-*.zip"
+    workload = "../workflowgear/busdata/G1-20[12][912]*.zip"
 
     n = len(glob.glob(workload))
 
