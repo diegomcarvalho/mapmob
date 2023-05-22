@@ -47,13 +47,17 @@ class AlgorithmFactoryClass:
 AlgorithmFactory = AlgorithmFactoryClass()
 
 #
-# This is an example how to implement an statistics
-# On the constructor, you need to append on the columns list the name of each column
-# that will be present on the data frame.
-# Then, for every select day in the data base, the visit_data_frame will be called to
-# inspect the day's data frame and build each value for each column.
-# In order to build the each line of the statistics data frame, you calculate each column's variable
-# and use the function _make to create a line for the inspect data frame in the statistics data
+# This is an example of how to implement statistics.
+
+# In the constructor, you need to append the name of each column that will be 
+# present in the data frame to the columns list.
+#
+# Then, for each selected day in the database, the visit_data_frame method will 
+# be called to inspect the data frame of that day and build values for each column.
+#
+# To construct each line of the statistics data frame, you calculate the variables 
+# for each column and use the _make function to create a line for the inspected data 
+# frame in the statistics data.
 #
 class Algorithm_EX(Algorithm):
     """An example implementation of an algorithm."""
