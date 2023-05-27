@@ -29,8 +29,8 @@ import pandas as pd
 from pyarrow.parquet import ParquetFile
 from pyarrow.lib import ArrowInvalid
 import pyarrow as pa
-from zipstorage import decode_meta_name
 
+import os
 
 def haversine(
     lat1: np.ndarray,
@@ -63,6 +63,9 @@ def haversine(
 
     return earth_radius * 2 * np.arcsin(np.sqrt(a))
 
+def decode_meta_name(file_name):
+    info = os.path.basename(file_name).split(".")
+    return info[0]
 
 def files_and_version_are_ok(
     parquet_file_list: List, version: str, df_list: List = [], df_read_all=False
