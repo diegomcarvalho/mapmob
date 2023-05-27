@@ -101,13 +101,12 @@ def files_and_version_are_ok(
     return sum(ret_list) == len(ret_list)
 
 
-def get_mapmob_dataframe(file_name: str, tag: str, base: str, file_list: str) -> pd.DataFrame:
+def get_mapmob_dataframe(file_base: str, base: str, file_list: str) -> pd.DataFrame:
     """
     Reads and merges Parquet files based on the provided parameters.
 
     Args:
-        file_name (str): The name of the file.
-        tag (str): The tag associated with the file.
+        file_base (str): The name of the file.
         base (str): The base directory where the Parquet files are located.
         file_list (str): A string containing the letters 'B', 'C', 'D', and/or 'E'
                          indicating which Parquet files to merge.
@@ -115,8 +114,6 @@ def get_mapmob_dataframe(file_name: str, tag: str, base: str, file_list: str) ->
     Returns:
         pd.DataFrame: Merged DataFrame containing the data from the specified Parquet files.
     """
-
-    file_base = decode_meta_name(file_name)
 
     # Define directory paths
     dst_0_dir = f"{base}/DST-0"
