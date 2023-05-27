@@ -29,6 +29,7 @@ import pandas as pd
 from pyarrow.parquet import ParquetFile
 from pyarrow.lib import ArrowInvalid
 import pyarrow as pa
+from zipstorage import decode_meta_name
 
 
 def haversine(
@@ -95,3 +96,55 @@ def files_and_version_are_ok(
 
     # return true if every test was ok (true).
     return sum(ret_list) == len(ret_list)
+
+
+def get_mapmob_dataframe(file_name: str, tag: str, base: str, file_list: str) -> pd.DataFrame:
+    """
+    Reads and merges Parquet files based on the provided parameters.
+
+    Args:
+        file_name (str): The name of the file.
+        tag (str): The tag associated with the file.
+        base (str): The base directory where the Parquet files are located.
+        file_list (str): A string containing the letters 'B', 'C', 'D', and/or 'E'
+                         indicating which Parquet files to merge.
+
+    Returns:
+        pd.DataFrame: Merged DataFrame containing the data from the specified Parquet files.
+    """
+
+    file_base = decode_meta_name(file_name)
+
+    # Define directory paths
+    dst_0_dir = f"{base}/DST-0"
+    dst_A_dir = f"{base}/DST-A"
+    dst_B_dir = f"{base}/DST-B"
+    dst_C_dir = f"{base}/DST-C"
+    dst_D_dir = f"{base}/DST-D"
+    dst_E_dir = f"{base}/DST-E"
+
+    # Define file paths
+    dst_0_file = f"{dst_0_dir}/{file_base}.parquet"
+    dst_A_file = f"{dst_A_dir}/{file_base}.parquet"
+    dst_B_file = f"{dst_B_dir}/{file_base}.parquet"
+    dst_C_file = f"{dst_C_dir}/{file_base}.parquet"
+    dst_D_file = f"{dst_D_dir}/{file_base}.parquet"
+    dst_E_file = f"{dst_E_dir}/{file_base}.parquet"
+
+    # Read the main DataFrame from DST-A file and drop 'SWVERSION' column
+    df = pd.read_parquet(dst_A_file).drop("SWVERSION", axis=1)
+
+    # Merge additional Parquet files based on file_list
+    if "B" in file_list:
+        df = pd.merge(df, pd.read_parquet(dst_B_file).drop("SWVERSION", axis=1), on="ID")
+    
+    if "C" in file_list:
+        df = pd.merge(df, pd.read_parquet(dst_C_file).drop("SWVERSION", axis=1), on="ID")
+
+    if "D" in file_list:
+        df = pd.merge(df, pd.read_parquet(dst_D_file).drop("SWVERSION", axis=1), on="ID")
+
+    if "E" in file_list:
+        df = pd.merge(df, pd.read_parquet(dst_E_file).drop("SWVERSION", axis=1), on="ID")
+
+    return df
