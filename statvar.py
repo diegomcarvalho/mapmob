@@ -15,60 +15,86 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 from typing import List
 
 
-class StatisticsVariable(object):
+from typing import List
+
+class StatisticsVariable:
     def __init__(self) -> None:
-        self.sum_value: List = list()
-        self.first_momentum: List = list()
-        self.second_momentum: List = list()
-        self.length: List = list()
-        self.description: List = list()
-        self.size: int = 0
+        self.variables = []
+        self.size = 0
 
     def create_variable(self, description: str = None) -> int:
-        self.sum_value.append(0.0)
-        self.first_momentum.append(0.0)
-        self.second_momentum.append(0.0)
-        self.length.append(0)
-        self.description.append(description)
-        id = self.size
+        """
+        Create a new variable and return its ID.
+        """
+        self.variables.append({
+            'sum_value': 0.0,
+            'first_momentum': 0.0,
+            'second_momentum': 0.0,
+            'length': 0,
+            'description': description
+        })
+        variable_id = self.size
         self.size += 1
-        return id
+        return variable_id
 
     def add_value(self, id: int, value: float) -> None:
-        self.sum_value[id] += value
-        delta = value - self.first_momentum[id]
-        self.length[id] += 1
-        self.first_momentum[id] += delta / self.length[id]
-        delta2 = value - self.first_momentum[id]
-        self.second_momentum[id] += delta * delta2
-        return
+        """
+        Add a value to the variable with the given ID.
+        """
+        variable = self.variables[id]
+        variable['sum_value'] += value
+        delta = value - variable['first_momentum']
+        variable['length'] += 1
+        variable['first_momentum'] += delta / variable['length']
+        delta2 = value - variable['first_momentum']
+        variable['second_momentum'] += delta * delta2
 
-    def bulk_add_value(self, id: int, value_list: list) -> None:
-        for i in value_list:
-            self.add_value(id, i)
-        return
+    def bulk_add_value(self, id: int, value_list: List[float]) -> None:
+        """
+        Add a list of values to the variable with the given ID.
+        """
+        for value in value_list:
+            self.add_value(id, value)
 
     def sum(self, id: int) -> float:
-        return self.sum_value[id]
+        """
+        Return the sum of values for the variable with the given ID.
+        """
+        return self.variables[id]['sum_value']
 
     def mean(self, id: int) -> float:
-        return self.first_momentum[id]
+        """
+        Return the mean of values for the variable with the given ID.
+        """
+        return self.variables[id]['first_momentum']
 
     def variance(self, id: int) -> float:
-        return self.second_momentum[id]
+        """
+        Return the variance of values for the variable with the given ID.
+        """
+        return self.variables[id]['second_momentum']
 
     def length(self, id: int) -> int:
-        return self.length[id]
+        """
+        Return the number of observations for the variable with the given ID.
+        """
+        return self.variables[id]['length']
 
-    def size(self, id: int) -> int:
+    def size(self) -> int:
+        """
+        Return the total number of variables.
+        """
         return self.size
 
     def dump(self, file_name: str) -> None:
+        """
+        Dump the variables' statistics to a file.
+        """
         with open(file_name, "w") as fd:
             fd.write("ID,MEAN,VARIANCE,NUMOBS,DESCRIPTION\n")
-            for i, desc in enumerate(self.description):
-                m = self.first_momentum[i]
-                v = self.second_momentum[i]
-                l = self.length[i]
+            for i, variable in enumerate(self.variables):
+                m = variable['first_momentum']
+                v = variable['second_momentum']
+                l = variable['length']
+                desc = variable['description']
                 fd.write(f"{i},{m},{v},{l},{desc}\n")
-        return

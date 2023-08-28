@@ -26,6 +26,7 @@ import json
 import os
 import typing
 import zipfile
+import pandas as pd
 
 
 def decode_entries_in_file(f: typing.TextIO, null_DATA: typing.Any) -> typing.List:
@@ -49,6 +50,35 @@ def decode_meta_name(file_name):
     info = os.path.basename(file_name).split(".")
     return info[0]
 
+def decode_parquet_storage(parquet_file_name: str) -> typing.Any:
+    tag = decode_meta_name(parquet_file_name)
+
+    # format: G1-2017-07-12
+    _, meta_day = tag[:2], tag[3:]
+    h_tag = f"{meta_day}:XX"
+
+    try:
+       df = pd.read_parquet(parquet_file_name)
+    except:
+        return False, h_tag, "FILE NOT FOUND"
+
+    # VINICIUS - completar o r_rval...
+    # convert the GPS time into a string
+    #gps_date = str(entry[0])
+    # convert the bus index into a string
+    #busid = str(entry[1])
+    # convert the service or service to str and remove the float marker
+    #line = str(entry[2]).replace(".0", "")
+    # convert the latitude into a float
+    #latitude = float(entry[3])
+    # convert the longitude into a float
+    #longitude = float(entry[4])
+    # convert the velocity into a float and m/s
+    #velocity = float(entry[5]) / 3.6
+
+    for index, row in df.iterrows():
+        r_val = [row['GPSDATA'], row['BUSID'], row['LINE'], row['LATITUDE'], row['LONGITUDE'], row['VELOCITY']]
+        yield True, h_tag, r_val
 
 def decode_zip_storage(zip_file_name: str) -> typing.Any:
 

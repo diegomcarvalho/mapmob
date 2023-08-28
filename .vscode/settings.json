@@ -16,6 +16,7 @@
         "geotag",
         "HDISTANCE",
         "identificacao",
+        "iterrows",
         "Limite",
         "mapmob",
         "metatadata",
