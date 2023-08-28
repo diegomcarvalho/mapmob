@@ -61,7 +61,8 @@ def read_unique_entries_from_file(
     error_metadata["FILENAME"] = list()
     error_metadata["EXTRAINFO"] = list()
 
-    for data in decode_zip_storage(zip_file_name):
+    # Vinicius: Trocar o zip_file_name por parquet...
+    for data in decode_parquet_storage(zip_file_name):
         valid_entry, h_tag, entry = data
         if not valid_entry:
             error_metadata["MOTIF"].append(entry)
@@ -489,6 +490,16 @@ def pipeline(
     if files_and_version_are_ok(output_list, version, df_list, False):
         return 0
 
+    # New pipeline
+    # TODO:
+    #       Modificar a read_unique_entries_from_file para ler os Parquets
+    #       Criar um busdata com todos os parquets (do DST-0 antigos, não são os
+    # da prefeitura) e multiplicar as colunas do Speed por 3.6
+    # Pegar os dados da prefeitura e gravar no busdata em formato partquet DST-0
+    # (1) - Procedure to convert Zip to Parquet or Prefeitura's files to parquet
+    # (2) - read_unique_entries_from_file:
+    #       
+
     # We need to read a Data Frame into memory... ;-)
     if df_list[0] is None:
         df = read_unique_entries_from_file(
@@ -577,12 +588,3 @@ def stat_pipeline(file_name: str, tag: str, base: str, file_list: str, algo):
     ag = AlgorithmFactory.get_algorithm(algo)
 
     return ag.visit_data_frame(tag, df)
-
-
-"""     except:
-        ret_t = ag.ret_type()
-        ret_val = [tag]
-        for x in range(len(ret_t._fields) - 1):
-            ret_val.append(0)
-        return ret_t._make(ret_val)
- """
