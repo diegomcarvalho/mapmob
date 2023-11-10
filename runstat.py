@@ -11,7 +11,7 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 """
- 
+
 # COPYRIGHT SECTION
 __author__ = "Diego Carvalho"
 __copyright__ = "Copyright 2022"
@@ -28,7 +28,6 @@ import glob
 
 import pandas as pd
 from algo import AlgorithmFactory
-
 from applications import stat_pipeline
 from statvar import StatisticsVariable
 from codetiming import Timer
@@ -44,13 +43,13 @@ def main():
 
     run_lines_id = stat_pool.create_variable("NUM_LINES")
 
-    ag = AlgorithmFactory.get_algorithm("algo_corredor")
+    ag = AlgorithmFactory.get_algorithm("gas_bairros")
 
     futures = []
     max_pending_tasks = 24 * 4
 
-    database_dir = "/home/carvalho/processed_data/database"
-    workload = f"{database_dir}/DST-A/G1-20[12][912]*.parquet"
+    database_dir = "/home/vinicius.vancellote/newmapbus/processed_data/database"
+    workload = f"{database_dir}/DST-A/G1-*.parquet"
 
     stat_data = list()
     meta_timer = dict()
@@ -79,8 +78,8 @@ def main():
             fut = stat_pipeline.remote(
                 w,
                 tag,
-                "/home/carvalho/processed_data/database",
-                ["A", "B", "C", "D", "E"],
+                "/home/vinicius.vancellote/newmapbus/processed_data/database",
+                ["A","B","D","E"],
                 ag.name,
             )
             futures.append(fut)
@@ -96,11 +95,11 @@ def main():
 
     df = pd.DataFrame(stat_data, columns=ag.columns)
 
-    df.to_parquet("/home/carvalho/processed_data/general_stat.parquet")
+    df.to_parquet("/home/vinicius.vancellote/newmapbus/processed_data/stats/gas_bairros_101123.parquet")
 
     df_meta = pd.DataFrame(meta_data, columns=["TAG", "TIME"])
 
-    df_meta.to_parquet("/home/carvalho/processed_data/processing_time.parquet")
+    df_meta.to_parquet("/home/vinicius.vancellote/newmapbus/processed_data/processingtime/gas_bairros_101123.parquet")
 
     return
 

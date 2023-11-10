@@ -17,8 +17,8 @@ __author__ = "Diego Carvalho"
 __copyright__ = "Copyright 2022"
 __credits__ = ["Diego Carvalho"]
 __license__ = "GPL"
-__version__ = "2.0.8"
-__maintainer__ = "Diego Carvalho, Pablo Moreira, Vinicius Vancelloti"
+__version__ = "2.0.11"
+__maintainer__ = "Diego Carvalho, Pablo Moreira, Vinicius Vancellote"
 __email__ = "d.carvalho@ieee.org"
 __status__ = "Research"
 
@@ -35,13 +35,13 @@ import rasterio
 import pandas as pd
 from tools import haversine, files_and_version_are_ok
 
-from zipstorage import decode_meta_name, decode_zip_storage
+from zipstorage import decode_meta_name, decode_parquet_storage
 from algo import AlgorithmFactory
 
 
 # DST-0
 def read_unique_entries_from_file(
-    zip_file_name: str,
+    parquet_file_name: str,
     output_file: str,
     directory: str,
     tag: str,
@@ -62,11 +62,11 @@ def read_unique_entries_from_file(
     error_metadata["EXTRAINFO"] = list()
 
     # Vinicius: Trocar o zip_file_name por parquet...
-    for data in decode_parquet_storage(zip_file_name):
+    for data in decode_parquet_storage(parquet_file_name):
         valid_entry, h_tag, entry = data
         if not valid_entry:
             error_metadata["MOTIF"].append(entry)
-            error_metadata["FILENAME"].append(str(zip_file_name))
+            error_metadata["FILENAME"].append(str(parquet_file_name))
             error_metadata["EXTRAINFO"].append(str(h_tag))
             continue
 
@@ -85,7 +85,7 @@ def read_unique_entries_from_file(
             velocity = float(entry[5]) / 3.6
         except (ValueError, IndexError) as e:
             error_metadata["MOTIF"].append(f"FIELD_ERROR:CORRUPTED{str(e)}")
-            error_metadata["FILENAME"].append(str(zip_file_name))
+            error_metadata["FILENAME"].append(str(parquet_file_name))
             error_metadata["EXTRAINFO"].append(str(h_tag))
             continue
 
@@ -97,13 +97,13 @@ def read_unique_entries_from_file(
             or longitude > -40.0
         ):
             error_metadata["MOTIF"].append("FIELD_ERROR:LAT_LONG")
-            error_metadata["FILENAME"].append(str(zip_file_name))
+            error_metadata["FILENAME"].append(str(parquet_file_name))
             error_metadata["EXTRAINFO"].append(str(h_tag))
             continue
 
         if velocity < 0.0 or velocity > 200.0:
             error_metadata["MOTIF"].append("FIELD_ERROR:VELOCITY")
-            error_metadata["FILENAME"].append(str(zip_file_name))
+            error_metadata["FILENAME"].append(str(parquet_file_name))
             error_metadata["EXTRAINFO"].append(str(h_tag))
             continue
 
@@ -122,7 +122,7 @@ def read_unique_entries_from_file(
 
     # convert the date column to datetime and sort it, besides create a
     # privet key (index) for every record
-    df["DATE"] = pd.to_datetime(df["DATE"], format="%m-%d-%Y %H:%M:%S", errors="coerce")
+    df["DATE"] = pd.to_datetime(df["DATE"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
     df.index = df["DATE"]
     df.sort_index(inplace=True)
     df.reset_index(drop=True, inplace=True)
@@ -199,7 +199,24 @@ def regions_pipeline(
     for m, e in zip(map_cols, ext_cols):
         df_result[m] = pd.merge(df_result, dfjoin, on="ID")[e]
         # df_result[m] = dfjoin[e]
-
+    #Abre o arquivo com consolidado de chuva
+    pluv_data = pd.read_parquet('pluv_data/pluv_data.parquet')
+    pluv_data = pluv_data.sort_values(by=['DATE'],ignore_index=True)
+    
+    #Ajustando para poder usar o MERGE_ASOF
+    df_result['DATE'] = df['DATE']
+    df_result= df_result[df_result['DATE'].notnull()]
+    df_result['PLUVIOMETRICREG'] = df_result['PLUVIOMETRICREG'].fillna(999)
+    df_result['PLUVIOMETRICREG'] = df_result['PLUVIOMETRICREG'].astype(int)
+    df_result = pd.merge_asof(df_result,pluv_data, on = ['DATE'], left_by = ['PLUVIOMETRICREG'],right_by=['OBJECTID'],direction='forward')
+    
+    df_result=df_result[['ID','PLUVIOMETRICREG','acumulado_chuva_15_min']]
+    #Dividindo o dataframe para retornar com os valores NaN
+    split1 = df_result[df_result['PLUVIOMETRICREG']==999]
+    split2 = df_result[df_result['PLUVIOMETRICREG']!=999]
+    split1['PLUVIOMETRICREG'] = np.nan
+    df_result = pd.concat([split2,split1])
+    df_result = df_result.sort_values(by=['ID'])
     df_result["SWVERSION"] = version
 
     df_result.to_parquet(output_file)
@@ -325,6 +342,8 @@ def calculate_daily_mobility(
     df["HEIGHT"] = df["ELEVATION"] - g["ELEVATION"].shift()
     df["DISTANCE"] = np.sqrt(np.square(df["HDISTANCE"]) + np.square(df["HEIGHT"]))
     df["INTERVAL"] = g["DATE"].diff()
+    #Corrigindo intervalos maior que 30 minutos
+    df.loc[df['INTERVAL']/np.timedelta64(1,"s")>(60*4), 'INTERVAL'] = pd.NaT
     df["SPEED"] = df["DISTANCE"] / (df["INTERVAL"] / np.timedelta64(1, "s"))
 
     df.drop(
@@ -444,10 +463,10 @@ def calculate_daily_mobility(
 
 @ray.remote(num_cpus=1)
 def pipeline(
-    zip_file_name: str, output_dir: str, metadata_dir: str, version: str = __version__
+    parquet_file_name: str, output_dir: str, metadata_dir: str, version: str = __version__
 ):
 
-    tag = decode_meta_name(zip_file_name)
+    tag = decode_meta_name(parquet_file_name)
 
     dst_0_dir = f"{output_dir}/database/DST-0"
     dst_A_dir = f"{output_dir}/database/DST-A"
@@ -490,20 +509,11 @@ def pipeline(
     if files_and_version_are_ok(output_list, version, df_list, False):
         return 0
 
-    # New pipeline
-    # TODO:
-    #       Modificar a read_unique_entries_from_file para ler os Parquets
-    #       Criar um busdata com todos os parquets (do DST-0 antigos, não são os
-    # da prefeitura) e multiplicar as colunas do Speed por 3.6
-    # Pegar os dados da prefeitura e gravar no busdata em formato partquet DST-0
-    # (1) - Procedure to convert Zip to Parquet or Prefeitura's files to parquet
-    # (2) - read_unique_entries_from_file:
-    #       
 
     # We need to read a Data Frame into memory... ;-)
     if df_list[0] is None:
         df = read_unique_entries_from_file(
-            zip_file_name, dst_0_file, metadata_dir, tag, version
+            parquet_file_name, dst_0_file, metadata_dir, tag, version
         )
     else:
         df = pd.read_parquet(dst_0_file)
@@ -525,7 +535,7 @@ def pipeline(
             df.copy(),
             "regions/Zonas_Pluviometricas.geojson",
             ["Cod"],
-            ["PLUVIOMETRICREG"],
+            ["PLUVIOMETRICREG","rainfall_volume"],
             dst_C_file,
             version,
         )

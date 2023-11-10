@@ -77,7 +77,7 @@ def decode_parquet_storage(parquet_file_name: str) -> typing.Any:
     #velocity = float(entry[5]) / 3.6
 
     for index, row in df.iterrows():
-        r_val = [row['GPSDATA'], row['BUSID'], row['LINE'], row['LATITUDE'], row['LONGITUDE'], row['VELOCITY']]
+        r_val = [row['DATE'], row['BUSID'], row['LINE'], row['LATITUDE'], row['LONGITUDE'], row['VELOCITY']]
         yield True, h_tag, r_val
 
 def decode_zip_storage(zip_file_name: str) -> typing.Any:

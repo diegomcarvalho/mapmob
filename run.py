@@ -41,9 +41,9 @@ def main():
     futures = []
     max_pending_tasks = 24 * 2
 
-    database_dir = "/home/carvalho/processed_data"
+    database_dir = "/home/vinicius.vancellote/newmapbus/processed_data"
     metadata_dir = "metadata"
-    workload = "../workflowgear/busdata/G1-20[12][912]*.zip"
+    workload = "/home/vinicius.vancellote/newmapbus/newbusdata/G1-*.parquet"
 
     n = len(glob.glob(workload))
 
