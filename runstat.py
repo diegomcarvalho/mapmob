@@ -43,12 +43,12 @@ def main():
 
     run_lines_id = stat_pool.create_variable("NUM_LINES")
 
-    ag = AlgorithmFactory.get_algorithm("gas_bairros")
+    ag = AlgorithmFactory.get_algorithm("algo01")
 
     futures = []
     max_pending_tasks = 24 * 4
 
-    database_dir = "/home/vinicius.vancellote/newmapbus/processed_data/database"
+    database_dir = "/home/vinicius.vancellote/newmapbus/new/processed_data/database"
     workload = f"{database_dir}/DST-A/G1-*.parquet"
 
     stat_data = list()
@@ -78,7 +78,7 @@ def main():
             fut = stat_pipeline.remote(
                 w,
                 tag,
-                "/home/vinicius.vancellote/newmapbus/processed_data/database",
+                "/home/vinicius.vancellote/newmapbus/new/processed_data/database",
                 ["A","B","D","E"],
                 ag.name,
             )
@@ -95,11 +95,11 @@ def main():
 
     df = pd.DataFrame(stat_data, columns=ag.columns)
 
-    df.to_parquet("/home/vinicius.vancellote/newmapbus/processed_data/stats/gas_bairros_101123.parquet")
+    df.to_parquet("/home/vinicius.vancellote/newmapbus/processed_data/stats/algo01_11122023.parquet")
 
     df_meta = pd.DataFrame(meta_data, columns=["TAG", "TIME"])
 
-    df_meta.to_parquet("/home/vinicius.vancellote/newmapbus/processed_data/processingtime/gas_bairros_101123.parquet")
+    df_meta.to_parquet("/home/vinicius.vancellote/newmapbus/processed_data/processingtime/algo01_11122023.parquet")
 
     return
 

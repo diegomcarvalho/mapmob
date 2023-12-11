@@ -17,7 +17,7 @@ __author__ = "Diego Carvalho"
 __copyright__ = "Copyright 2022"
 __credits__ = ["Diego Carvalho"]
 __license__ = "GPL"
-__version__ = "2.0.11"
+__version__ = "2.0.13"
 __maintainer__ = "Diego Carvalho, Pablo Moreira, Vinicius Vancellote"
 __email__ = "d.carvalho@ieee.org"
 __status__ = "Research"
@@ -91,10 +91,10 @@ def read_unique_entries_from_file(
 
         # eio clip -o Rio-DEM.tif --bounds -24 -44 -22 -40
         if (
-            latitude < -24.0
-            or latitude > -22.0
+            latitude < -23.2
+            or latitude > -22.6
             or longitude < -44.0
-            or longitude > -40.0
+            or longitude > -43.0
         ):
             error_metadata["MOTIF"].append("FIELD_ERROR:LAT_LONG")
             error_metadata["FILENAME"].append(str(parquet_file_name))
@@ -129,7 +129,9 @@ def read_unique_entries_from_file(
     df["ID"] = df.index
 
     df["SWVERSION"] = version
-
+    df.rename(
+        columns={"DATE": "GPSTIMESTAMP"}, inplace=True
+    )
     df.to_parquet(output_file)
 
     return df
@@ -201,16 +203,18 @@ def regions_pipeline(
         # df_result[m] = dfjoin[e]
     #Abre o arquivo com consolidado de chuva
     pluv_data = pd.read_parquet('pluv_data/pluv_data.parquet')
+    pluv_data['DATE'] = pd.to_datetime(pluv_data['DATE'])
     pluv_data = pluv_data.sort_values(by=['DATE'],ignore_index=True)
+    pluv_data['OBJECTID']=pluv_data['OBJECTID'].astype(int)
     
     #Ajustando para poder usar o MERGE_ASOF
-    df_result['DATE'] = df['DATE']
+    df_result['DATE'] = pd.to_datetime(df['GPSTIMESTAMP'])
     df_result= df_result[df_result['DATE'].notnull()]
     df_result['PLUVIOMETRICREG'] = df_result['PLUVIOMETRICREG'].fillna(999)
     df_result['PLUVIOMETRICREG'] = df_result['PLUVIOMETRICREG'].astype(int)
     df_result = pd.merge_asof(df_result,pluv_data, on = ['DATE'], left_by = ['PLUVIOMETRICREG'],right_by=['OBJECTID'],direction='forward')
     
-    df_result=df_result[['ID','PLUVIOMETRICREG','acumulado_chuva_15_min']]
+    df_result=df_result[['ID','PLUVIOMETRICREG','RAINFALLVOLUME']]
     #Dividindo o dataframe para retornar com os valores NaN
     split1 = df_result[df_result['PLUVIOMETRICREG']==999]
     split2 = df_result[df_result['PLUVIOMETRICREG']!=999]
@@ -219,6 +223,10 @@ def regions_pipeline(
     df_result = df_result.sort_values(by=['ID'])
     df_result["SWVERSION"] = version
 
+    df_result.rename(
+        columns={"PLUVIOMETRICREG": "RAINFALLZONE"}, inplace=True
+    )
+    
     df_result.to_parquet(output_file)
 
     return
@@ -290,28 +298,10 @@ def join_barrios_garages_terminals_pipeline(
 
     # Fazendo o Join com os Corredores
     dfjoin = gpd.sjoin(dfjoin, velocidade, how="left")
-    dfjoin = dfjoin.drop(
-        columns=[
-            "Name",
-            "latitude",
-            "longitude",
-            "OBJECTID",
-            "index_right",
-            "geometry",
-            "DATE",
-            "BUSID",
-            "LINE",
-            "LATITUDE",
-            "LONGITUDE",
-            "VELOCITY",
-            "SWVERSION",
-            "ELEVATION"
-        ],
-        axis=1,
-    )
+    dfjoin = dfjoin[['ID','CODBAIRRO','CODRA','id_garagem','num_identificacao','Cod','SWVERSION']]
 
     dfjoin.rename(
-        columns={"id_garagem": "PARKING", "num_identificacao": "TERMINAL", "Cod": "CORREDOR"}, inplace=True
+        columns={"id_garagem": "PARKING", "num_identificacao": "TERMINAL", "Cod": "CORRIDOR","CODRA":"ADMINISTRATIVEREGION","CODBAIRRO":"NEIGHBORHOOD"}, inplace=True
     )
 
     dfjoin["SWVERSION"] = version
@@ -341,14 +331,14 @@ def calculate_daily_mobility(
     )
     df["HEIGHT"] = df["ELEVATION"] - g["ELEVATION"].shift()
     df["DISTANCE"] = np.sqrt(np.square(df["HDISTANCE"]) + np.square(df["HEIGHT"]))
-    df["INTERVAL"] = g["DATE"].diff()
+    df["INTERVAL"] = g["GPSTIMESTAMP"].diff()
     #Corrigindo intervalos maior que 30 minutos
     df.loc[df['INTERVAL']/np.timedelta64(1,"s")>(60*4), 'INTERVAL'] = pd.NaT
     df["SPEED"] = df["DISTANCE"] / (df["INTERVAL"] / np.timedelta64(1, "s"))
 
     df.drop(
         columns=[
-            "DATE",
+            "GPSTIMESTAMP",
             "BUSID",
             "LINE",
             "LATITUDE",
@@ -442,7 +432,7 @@ def calculate_daily_mobility(
 
     df.drop(
         columns=[
-            "DATE",
+            "GPSTIMESTAMP",
             "BUSID",
             "LINE",
             "LATITUDE",

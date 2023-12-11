@@ -141,11 +141,11 @@ class Algorithm_01(Algorithm):
         result_list = []
 
         for i in range(1,49):
-            t = df[df["CORREDOR"] == i].VELOCITY.mean()
+            t = df[df["CORRIDOR"] == i].VELOCITY.mean()
             result_list.append(t)
 
         for i in range(1,49):
-            t = df[df["CORREDOR"] == i].SPEED.mean()
+            t = df[df["CORRIDOR"] == i].SPEED.mean()
             result_list.append(t)
 
         ret_value = self.ret_type()._make(
@@ -211,7 +211,7 @@ class Algorithm_03(Algorithm):
     def __init__(self, name) -> None:
 
         for i in range(165):
-            self.columns.append(f"BAIRRO{i:03}")
+            self.columns.append(f"NEIGHBORHOOD{i:03}")
 
         super().__init__(name, self.columns)
 
@@ -223,7 +223,7 @@ class Algorithm_03(Algorithm):
         result_list = []
 
         for i in range(165):
-            result_list.append(df[df.CODBAIRRO == f"{i:03}"].VELOCITY.mean())
+            result_list.append(df[df.NEIGHBORHOOD == f"{i:03}"].VELOCITY.mean())
 
         ret_value = self.ret_type()._make(
             (
@@ -277,15 +277,15 @@ class Algorithm_04(Algorithm):
         result_list = []
 
         for i in range(1,49):
-            t = df[df["CORREDOR"] == i].VELOCITY.mean()
+            t = df[df["CORRIDOR"] == i].VELOCITY.mean()
             result_list.append(t)
 
         for i in range(1,49):
-            t = df[df["CORREDOR"] == i].SPEED.mean()
+            t = df[df["CORRIDOR"] == i].SPEED.mean()
             result_list.append(t)
 
         for i in range(1,49):
-            t = df[df["CORREDOR"] == i].SPEED.std()
+            t = df[df["CORRIDOR"] == i].SPEED.std()
             result_list.append(t)
 
         ret_value = self.ret_type()._make(
@@ -361,7 +361,7 @@ class Algorithm_13(Algorithm):
                 self.columns.append(i)
 
             for i in range(1,165):
-                self.columns.append(f"BAIRRO_{i:03}")
+                self.columns.append(f"NEIGHBORHOOD_{i:03}")
 
         super().__init__(name, self.columns)
 
@@ -384,7 +384,7 @@ class Algorithm_13(Algorithm):
         result_list = []
 
         for i in range(1,165):
-            t = len(df[df["CODBAIRRO"] == f"{i:03}"])
+            t = len(df[df["NEIGHBORHOOD"] == f"{i:03}"])
             result_list.append(t)
 
         ret_value = self.ret_type()._make(
@@ -406,7 +406,7 @@ class Algorithm_14(Algorithm):
                 self.columns.append(i)
 
             for i in range(1,165):
-                self.columns.append(f"BAIRRO_{i:03}")
+                self.columns.append(f"NEIGHBORHOOD_{i:03}")
 
         super().__init__(name, self.columns)
 
@@ -432,7 +432,7 @@ class Algorithm_14(Algorithm):
         df = df[df['TERMINAL'].isnull()]
         
         for i in range(1,165):
-            t = df[df["CODBAIRRO"] == f"{i:03}"].VELOCITY.mean()
+            t = df[df["NEIGHBORHOOD"] == f"{i:03}"].VELOCITY.mean()
             result_list.append(t)
 
         ret_value = self.ret_type()._make(
@@ -455,7 +455,7 @@ class Algorithm_15(Algorithm):
                 self.columns.append(i)
 
             for i in range(1,165):
-                self.columns.append(f"BAIRRO_{i:03}")
+                self.columns.append(f"NEIGHBORHOOD_{i:03}")
 
         super().__init__(name, self.columns)
 
@@ -481,7 +481,7 @@ class Algorithm_15(Algorithm):
         df = df[df['TERMINAL'].isnull()]
         
         for i in range(1,165):
-            t = df[df["CODBAIRRO"] == f"{i:03}"].SPEED.mean()
+            t = df[df["NEIGHBORHOOD"] == f"{i:03}"].SPEED.mean()
             result_list.append(t)
 
         ret_value = self.ret_type()._make(
@@ -502,7 +502,7 @@ class Algorithm_16(Algorithm):
         if len(self.columns) == 0:
             for i in ["TAG", "NUM_OBS"]:
                 self.columns.append(i)
-            turnos = ['madrugada','manha','tarde','noite']
+            turnos = ['dawn','morning','afternoon','night']
                 
             for i in turnos:
                 self.columns.append(f"Vel_{i}")
@@ -523,18 +523,16 @@ class Algorithm_16(Algorithm):
 
         df = df[df['PARKING'].isnull()]
         df = df[df['TERMINAL'].isnull()]
-        condicao = [df['DATE'].dt.hour<6,df['DATE'].dt.hour<12,df['DATE'].dt.hour<18]
-        turno_res = ['madrugada','manha','tarde']
-        df['Turno'] = np.select(condicao,turno_res,'noite')
+        condition = [df['GPSTIMESTAMP'].dt.hour<6,df['GPSTIMESTAMP'].dt.hour<12,df['GPSTIMESTAMP'].dt.hour<18]
+        shift = ['dawn','morning','afternoon','night']
+        df['Shift'] = np.select(condition,shift,'night')
 
-        turnos = ['madrugada','manha','tarde','noite']
-
-        for i in turnos:
-            t = df[df['Turno']==i].VELOCITY.mean()
+        for i in shifts:
+            t = df[df['Shift']==i].VELOCITY.mean()
             result_list.append(t)
             
-        for i in turnos:
-            t = len(df[df['Turno']==i])
+        for i in shifts:
+            t = len(df[df['Shift']==i])
             result_list.append(t)
 
         ret_value = self.ret_type()._make(
@@ -557,13 +555,13 @@ class Algorithm_17(Algorithm):
                 self.columns.append(i)
 
             for i in range(1,165):
-                self.columns.append(f"CO_BAIRRO_{i:03}")
+                self.columns.append(f"CO_NEIGHBORHOOD_{i:03}")
             for i in range(1,165):
-                self.columns.append(f"CO2_BAIRRO_{i:03}")
+                self.columns.append(f"CO2_NEIGHBORHOOD_{i:03}")
             for i in range(1,165):
-                self.columns.append(f"NOx_BAIRRO_{i:03}")
+                self.columns.append(f"NOx_NEIGHBORHOOD_{i:03}")
             for i in range(1,165):
-                self.columns.append(f"HC_BAIRRO_{i:03}")
+                self.columns.append(f"HC_NEIGHBORHOOD_{i:03}")
 
         super().__init__(name, self.columns)
 
@@ -589,22 +587,22 @@ class Algorithm_17(Algorithm):
         df = df[df['TERMINAL'].isnull()]
         
         for i in range(1,165):
-            t = df[df["CODBAIRRO"] == f"{i:03}"]
+            t = df[df["NEIGHBORHOOD"] == f"{i:03}"]
             t['CO_t'] = (t["INTERVAL"] / np.timedelta64(1, "s")) * t["CO"]
             t = t['CO_t'].sum()               
             result_list.append(t)
         for i in range(1,165):
-            t = df[df["CODBAIRRO"] == f"{i:03}"]
+            t = df[df["NEIGHBORHOOD"] == f"{i:03}"]
             t['CO2_t'] = (t["INTERVAL"] / np.timedelta64(1, "s")) * t["CO_2"]
             t = t['CO2_t'].sum()               
             result_list.append(t)
         for i in range(1,165):
-            t = df[df["CODBAIRRO"] == f"{i:03}"]
+            t = df[df["NEIGHBORHOOD"] == f"{i:03}"]
             t['nox_t'] = (t["INTERVAL"] / np.timedelta64(1, "s")) * t["NO_x"]
             t = t['nox_t'].sum()               
             result_list.append(t)
         for i in range(1,165):
-            t = df[df["CODBAIRRO"] == f"{i:03}"]
+            t = df[df["NEIGHBORHOOD"] == f"{i:03}"]
             t['HC_t'] = (t["INTERVAL"] / np.timedelta64(1, "s")) * t["HC"]
             t = t['HC_t'].sum()               
             result_list.append(t)

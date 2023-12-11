@@ -17,7 +17,7 @@ __author__ = "Diego Carvalho"
 __copyright__ = "Copyright 2022"
 __credits__ = ["Diego Carvalho"]
 __license__ = "GPL"
-__version__ = "2.0.4"
+__version__ = "2.0.12"
 __maintainer__ = "Diego Carvalho"
 __email__ = "d.carvalho@ieee.org"
 __status__ = "Research"
@@ -41,7 +41,7 @@ def main():
     futures = []
     max_pending_tasks = 24 * 2
 
-    database_dir = "/home/vinicius.vancellote/newmapbus/processed_data"
+    database_dir = "/home/vinicius.vancellote/newmapbus/new/processed_data"
     metadata_dir = "metadata"
     workload = "/home/vinicius.vancellote/newmapbus/newbusdata/G1-*.parquet"
 
