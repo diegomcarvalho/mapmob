@@ -353,7 +353,7 @@ def calculate_daily_mobility(
     )
 
     df["VSP"] = (
-        df["SPEED"] * df["ACCELERATION"] * df["HEIGHT"] + 0.092
+        df["SPEED"] * df["ACCELERATION"] * df["HEIGHT"] / df["DISTANCE"] + 0.092
     ) + 0.00021 * df["SPEED"] ** 3
 
     df["VSPMode"] = pd.cut(
